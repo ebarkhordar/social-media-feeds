@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feed Component — Local Test Harness</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #15202B;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #E7E9EA;
+    }
+    .test-controls {
+      max-width: 600px;
+      margin: 0 auto 16px;
+      padding: 16px;
+      background: #1E2A35;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+    .test-controls h2 { margin: 0 0 12px; font-size: 16px; }
+    .test-controls label { margin-right: 16px; }
+    .test-controls select, .test-controls input {
+      background: #253341;
+      color: #E7E9EA;
+      border: 1px solid #38444D;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .test-controls button {
+      background: #1D9BF0;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+    .test-controls button:hover { background: #1A8CD8; }
+    .debug-panel {
+      max-width: 600px;
+      margin: 16px auto 0;
+      padding: 16px;
+      background: #1E2A35;
+      border-radius: 12px;
+      font-size: 12px;
+      font-family: 'SF Mono', Monaco, monospace;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .debug-panel h3 { margin: 0 0 8px; font-size: 14px; font-family: inherit; }
+    .debug-entry { padding: 4px 0; border-bottom: 1px solid #253341; }
+    .debug-entry.dwell { color: #1D9BF0; }
+    .debug-entry.engagement { color: #F91880; }
+    #question-container { max-width: 640px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+
+<div class="test-controls">
+  <h2>Test Controls</h2>
+  <label>Condition:
+    <select id="test-condition">
+      <option value="A">A — Negative sentiment first</option>
+      <option value="B">B — Positive sentiment first</option>
+      <option value="C" selected>C — Random order</option>
+    </select>
+  </label>
+  <label>Participant ID:
+    <input id="test-pid" type="text" value="test_user_001" size="15">
+  </label>
+  <br>
+  <button onclick="reloadFeed()">Reload Feed</button>
+  <button onclick="simulateSubmit()">Simulate Page Submit (save data)</button>
+  <button onclick="clearDebug()">Clear Log</button>
+</div>
+
+<div id="question-container"></div>
+
+<div class="debug-panel" id="debug-panel">
+  <h3>Debug Log</h3>
+  <div id="debug-log"></div>
+</div>
+
+<script>
+// ============================================================
+// Mock Qualtrics API for local testing
+// ============================================================
+var _embeddedData = {};
+var _onLoadCallbacks = [];
+var _onPageSubmitCallbacks = [];
+var _onUnloadCallbacks = [];
+
+var Qualtrics = {
+  SurveyEngine: {
+    addOnload: function(fn) { _onLoadCallbacks.push(fn); },
+    addOnPageSubmit: function(fn) { _onPageSubmitCallbacks.push(fn); },
+    addOnUnload: function(fn) { _onUnloadCallbacks.push(fn); },
+    getEmbeddedData: function(key) { return _embeddedData[key] || null; },
+    setEmbeddedData: function(key, val) {
+      _embeddedData[key] = val;
+      debugLog("Embedded data SET: " + key + " = " + (val.length > 200 ? val.substring(0, 200) + "..." : val), "dwell");
+    }
+  }
+};
+
+function debugLog(msg, type) {
+  var el = document.getElementById("debug-log");
+  var entry = document.createElement("div");
+  entry.className = "debug-entry " + (type || "");
+  entry.textContent = "[" + new Date().toLocaleTimeString() + "] " + msg;
+  el.insertBefore(entry, el.firstChild);
+}
+
+function clearDebug() {
+  document.getElementById("debug-log").innerHTML = "";
+}
+
+function reloadFeed() {
+  // Reset state
+  _embeddedData = {
+    condition: document.getElementById("test-condition").value,
+    participant_id: document.getElementById("test-pid").value
+  };
+  _onLoadCallbacks = [];
+  _onPageSubmitCallbacks = [];
+  _onUnloadCallbacks = [];
+
+  document.getElementById("question-container").innerHTML = "";
+  debugLog("--- Feed reloaded with condition=" + _embeddedData.condition + " pid=" + _embeddedData.participant_id + " ---");
+
+  // Re-run the component script
+  loadComponent();
+}
+
+function simulateSubmit() {
+  debugLog("=== Simulating page submit ===", "engagement");
+  _onPageSubmitCallbacks.forEach(function(fn) { fn(); });
+
+  // Pretty-print the saved data
+  if (_embeddedData.dwell_data) {
+    try {
+      var parsed = JSON.parse(_embeddedData.dwell_data);
+      debugLog("DWELL DATA: feedDuration=" + parsed.feedDurationMs + "ms, scrollDepth=" + parsed.scrollDepthPct + "%", "dwell");
+      for (var pid in parsed.posts) {
+        var p = parsed.posts[pid];
+        debugLog("  " + pid + ": " + p.ms + "ms (pos=" + p.pos + " v1s=" + p.v1s + " v3s=" + p.v3s + " v5s=" + p.v5s + ")", "dwell");
+      }
+    } catch (e) {}
+  }
+  if (_embeddedData.engagement_data) {
+    try {
+      var parsed = JSON.parse(_embeddedData.engagement_data);
+      parsed.actions.forEach(function(a) {
+        debugLog("  " + a.action + " on " + a.postId + " (active=" + a.active + " t=" + a.timestamp + "ms)", "engagement");
+      });
+    } catch (e) {}
+  }
+}
+
+function loadComponent() {
+  // Create a mock question engine
+  var mockEngine = {
+    getQuestionContainer: function() {
+      return document.getElementById("question-container");
+    },
+    questionclick: null
+  };
+
+  // Set initial embedded data
+  _embeddedData = {
+    condition: document.getElementById("test-condition").value,
+    participant_id: document.getElementById("test-pid").value
+  };
+
+  // Load the component script dynamically
+  var script = document.createElement("script");
+  script.src = "feed-component.js?" + Date.now(); // cache-bust
+  script.onload = function() {
+    // Run onload callbacks with mock engine context
+    _onLoadCallbacks.forEach(function(fn) {
+      fn.call(mockEngine);
+    });
+    debugLog("Feed component loaded. " + document.querySelectorAll(".feed-post").length + " posts rendered.");
+  };
+  document.body.appendChild(script);
+}
+
+// Initial load
+window.addEventListener("DOMContentLoaded", function() {
+  loadComponent();
+});
+</script>
+
+</body>
+</html>
