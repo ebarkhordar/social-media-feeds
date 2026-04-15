@@ -118,19 +118,48 @@ Find the `conditionSortMap` in the `FEED_CONFIG` section:
 
 ```javascript
 conditionSortMap: {
-  "A": "sentiment_low",    // Condition A: negative posts first
-  "B": "sentiment_high",   // Condition B: positive posts first
+  "A": "custom_order",     // Condition A: custom order defined in customOrderings.A
+  "B": "custom_order",     // Condition B: custom order defined in customOrderings.B
   "C": "random",           // Condition C: random (control)
-  "default": "default"     // Fallback
+  "default": "random"      // Fallback
 }
 ```
 
 Available sort modes:
 - `"default"` — array order as-is
 - `"random"` — seeded shuffle (same participant always sees same order)
-- `"sentiment_high"` — most positive first
-- `"sentiment_low"` — most negative first
+- `"custom_order"` — explicit post ID list per condition (see below)
+- `"sentiment_high"` — most positive sentiment first
+- `"sentiment_low"` — most negative sentiment first
 - `"engagement"` — most liked/retweeted first
+
+#### Custom orderings (per condition)
+
+Use `"custom_order"` when you want the researcher to control the exact post
+sequence per condition. Edit the `customOrderings` block in `FEED_CONFIG`:
+
+```javascript
+customOrderings: {
+  "A": [
+    "post_04", "post_18", "post_06", "post_01", "post_09",
+    "post_20", "post_11", "post_15", "post_08", "post_17",
+    "post_02", "post_05", "post_13", "post_07", "post_19",
+    "post_14", "post_10", "post_03", "post_16", "post_12"
+  ],
+  "B": [
+    "post_12", "post_16", "post_03", "post_14", "post_10",
+    // ... etc
+  ]
+}
+```
+
+Rules:
+- List post IDs in the exact order you want them to appear (top of feed first).
+- Any post IDs not listed in `customOrderings[condition]` will be appended at
+  the end of the feed in their original order — nothing gets silently dropped.
+- IDs that don't exist in `FEED_POSTS` are ignored.
+- If a condition has no custom ordering defined, it falls back to the original
+  `FEED_POSTS` order.
 
 ### Step 7: Preview and Test
 

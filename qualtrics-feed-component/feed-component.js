@@ -11,104 +11,161 @@
  */
 
 // ============================================================
-// CONFIGURATION — Edit this section for your study
+// CONFIGURATION
+// Edit this section for your study. Everything researchers need to
+// customize lives here — posts are defined further down.
 // ============================================================
 
 var FEED_CONFIG = {
-  // How posts are sorted per condition. The "condition" value comes from
+
+  // ---------- Study identification ----------
+  studyName: "Turkish Student Feed Experiment",
+  version: "2.0",
+
+  // ---------- Condition sorting ----------
+  // How posts are ordered per condition. The "condition" value comes from
   // Qualtrics embedded data (set via URL param or Survey Flow randomizer).
   //
-  // Built-in sort modes:
-  //   "default"      — use the order from the posts array as-is
-  //   "random"       — Fisher-Yates shuffle (seeded by participant ID for reproducibility)
-  //   "sentiment_high" — most positive sentiment first
-  //   "sentiment_low"  — most negative sentiment first
-  //   "engagement"   — highest total engagement (likes+retweets+replies) first
+  // Available sort modes:
+  //   "default"         use FEED_POSTS order as-is
+  //   "random"          seeded Fisher-Yates (same participant gets same order)
+  //   "custom_order"    explicit post ID list from customOrderings below
+  //   "sentiment_high"  most positive sentiment first
+  //   "sentiment_low"   most negative sentiment first
+  //   "engagement"      highest total engagement (likes+retweets+replies) first
   //
   conditionSortMap: {
-    "A": "sentiment_low",    // Condition A: negative content at top
-    "B": "sentiment_high",   // Condition B: positive content at top
-    "C": "random",           // Condition C: random order (control)
-    "default": "default"     // Fallback if condition is not set
+    "A": "custom_order",   // Condition A: custom order defined in customOrderings.A
+    "B": "custom_order",   // Condition B: custom order defined in customOrderings.B
+    "C": "random",         // Condition C: random order (control)
+    "default": "random"    // Fallback if condition is not set
   },
 
-  // Qualtrics embedded data field names (must be created in Survey Flow)
+  // Custom per-condition post orderings.
+  // List the post IDs in the exact order they should appear in the feed.
+  // Any post IDs in FEED_POSTS that are NOT in this list will be appended
+  // at the end in their original order.
+  //
+  // TODO: Replace these placeholder orderings with the ones from your advisor.
+  // Just list post IDs (see FEED_POSTS below for available IDs).
+  customOrderings: {
+    "A": [
+      // PLACEHOLDER — replace with advisor's ordering for Condition A
+      "post_04", "post_18", "post_06", "post_01", "post_09",
+      "post_20", "post_11", "post_15", "post_08", "post_17",
+      "post_02", "post_05", "post_13", "post_07", "post_19",
+      "post_14", "post_10", "post_03", "post_16", "post_12"
+    ],
+    "B": [
+      // PLACEHOLDER — replace with advisor's ordering for Condition B
+      "post_12", "post_16", "post_03", "post_14", "post_10",
+      "post_19", "post_07", "post_17", "post_02", "post_05",
+      "post_15", "post_08", "post_13", "post_11", "post_20",
+      "post_09", "post_01", "post_06", "post_18", "post_04"
+    ]
+  },
+
+  // ---------- Qualtrics integration ----------
+  // Embedded data field names (must be created in Survey Flow)
   embeddedFields: {
-    condition: "condition",           // reads condition assignment from this field
-    participantId: "participant_id",  // reads participant ID from this field
-    dwellData: "dwell_data",          // writes per-post dwell times here
-    engagementData: "engagement_data" // writes like/retweet/bookmark actions here
+    condition: "condition",            // reads condition assignment from this field
+    participantId: "participant_id",   // reads participant ID from this field
+    dwellData: "dwell_data",           // writes per-post dwell times here
+    engagementData: "engagement_data"  // writes like/retweet/bookmark actions here
   },
 
-  // Feed behavior
-  feedHeight: "600px",       // height of the scrollable feed container
-  showEndMessage: true,      // show "You've reached the end" message
+  // ---------- Feed appearance ----------
+  theme: "dark",                    // "dark" only for now (light coming later)
+  feedHeight: "600px",              // height of the scrollable feed container
+  maxWidth: "600px",                // max width of the feed on desktop
+
+  // Header
+  showHeader: true,
+  headerTitle: "Home",
+  showTabs: true,
+  tabs: ["For you", "Following"],
+  activeTabIndex: 0,
+
+  // Post display
+  showEngagementCounts: true,       // show like/retweet/reply counts
+  useRelativeCounts: true,          // "1.2K" instead of "1243"
+  showEndMessage: true,
   endMessageText: "You've reached the end of your feed.",
 
-  // Dwell tracking thresholds (milliseconds)
+  // ---------- Feed behavior ----------
+  requireFullScroll: false,         // gate Next button until reaching the bottom
+  minTimeSeconds: 0,                // minimum time before Next is enabled (0 = no gate)
+
+  // ---------- Dwell tracking ----------
   dwellThresholds: {
-    visible: 0,     // post entered viewport
-    short: 1000,    // 1 second
-    medium: 3000,   // 3 seconds
-    long: 5000      // 5 seconds
-  }
+    short: 1000,                    // 1 second
+    medium: 3000,                   // 3 seconds
+    long: 5000                      // 5 seconds
+  },
+  intersectionThreshold: 0.5,       // 0-1, how much of a post must be visible to count
+
+  // ---------- Debug ----------
+  debug: false                      // console.log events as they fire
 };
 
 
 // ============================================================
-// POSTS DATA — Replace with your actual posts or load from external source
+// POSTS DATA
+// 25 tweets relevant to Turkish students. Mix of English (majority)
+// and Turkish, with varied sentiment. Based on real themes but all
+// accounts and quotes are fictional. Feel free to edit or replace.
 // ============================================================
 
 var FEED_POSTS = [
   {
     id: "post_01",
-    author: "Sarah Mitchell",
-    handle: "@sarahmit_dc",
+    author: "Emre Aydın",
+    handle: "@emre_phd_bogazici",
     avatar_color: "#1DA1F2",
-    text: "Just got an email from my university\u2019s international office. They\u2019re telling Turkish students on F-1 visas to \"stay informed\" about potential policy changes. Stay informed?? We need actual support, not vague emails.",
+    text: "Boğaziçi mezunuyum, MIT'e kabul aldım ama vize randevusu 8 ay sonraya verildi. Hocalarım programa başlayamazsam pozisyonun kaybolacağını söyledi. Ne yapacağımı bilmiyorum.",
     timestamp: "2h",
-    likes: 1843,
-    retweets: 612,
-    replies: 289,
+    likes: 3241,
+    retweets: 1876,
+    replies: 523,
     category: "personal_experience",
-    topic: "visa_anxiety",
-    sentiment: -0.6
+    topic: "visa_delay",
+    sentiment: -0.8
   },
   {
     id: "post_02",
-    author: "Middle East Policy Center",
-    handle: "@MEPolicyCenter",
-    avatar_color: "#794BC4",
-    text: "BREAKING: New executive order could impact visa processing for students from 6 Middle Eastern countries. Universities scrambling to advise thousands of affected international students. Full analysis thread below.",
+    author: "Fulbright Türkiye",
+    handle: "@fulbright_tr",
+    avatar_color: "#E0245E",
+    text: "REMINDER: The 2026-2027 Fulbright Program application deadline for Turkish citizens has been extended to May 30. Despite current uncertainty, we remain committed to supporting Turkish scholars pursuing graduate education in the US.",
     timestamp: "4h",
     likes: 5621,
     retweets: 3204,
-    replies: 876,
-    category: "news",
-    topic: "policy_change",
-    sentiment: -0.4
+    replies: 287,
+    category: "official",
+    topic: "scholarship",
+    sentiment: 0.4
   },
   {
     id: "post_03",
-    author: "Dr. James Hartley",
-    handle: "@profhartley",
+    author: "Dr. Ayşe Kılıç",
+    handle: "@aysekilic_prof",
     avatar_color: "#17BF63",
-    text: "As a department chair, I want to be clear: our international students are valued members of our community. We are working with legal counsel to support every student affected by the new travel restrictions. You are not alone.",
+    text: "To my Turkish students asking about US PhD programs: don't give up. I went through the same visa uncertainty in 2003. I'm now a tenured professor at Stanford. The path is harder than it should be, but it exists. DM me — I'm happy to review your SOPs.",
     timestamp: "5h",
-    likes: 12450,
-    retweets: 4102,
-    replies: 534,
-    category: "institutional_response",
-    topic: "support",
-    sentiment: 0.7
+    likes: 18920,
+    retweets: 7102,
+    replies: 892,
+    category: "support",
+    topic: "mentorship",
+    sentiment: 0.8
   },
   {
     id: "post_04",
-    author: "Elif Demir",
-    handle: "@elif_studying_us",
+    author: "Zeynep Demir",
+    handle: "@zeynep_in_istanbul",
     avatar_color: "#F45D22",
-    text: "I\u2019m a Turkish PhD student in engineering. I went home for my grandmother\u2019s funeral and now I\u2019m stuck. My visa interview got \"administratively processed\" indefinitely. My advisor says my funding might not survive the delay. 4 years of research, gone?",
-    timestamp: "6h",
+    text: "3 yıl TOEFL'a çalıştım, GRE'den 329 aldım, tam burs kabul aldım. Şimdi konsolosluk randevum iptal edildi ve yeni randevu tarihi gösterilmiyor. Tüm hayallerim askıya alındı. Babam \"gitme Türkiye'de oku\" diyor ama burada benim alanımda program yok.",
+    timestamp: "3h",
     likes: 8934,
     retweets: 3891,
     replies: 1205,
@@ -118,227 +175,227 @@ var FEED_POSTS = [
   },
   {
     id: "post_05",
-    author: "CNN Breaking News",
-    handle: "@cabortnews",
+    author: "Hurriyet Daily News",
+    handle: "@hdailynews",
     avatar_color: "#E0245E",
-    text: "Israel launches new military operation in southern Gaza. International community calls for ceasefire. US State Department issues updated travel advisory for the region. How this affects broader Middle East policy \u2014 analysis at the link.",
-    timestamp: "1h",
-    likes: 15230,
-    retweets: 8764,
-    replies: 4521,
+    text: "Visa refusal rates for Turkish nationals applying for US F-1 student visas have reached 38%, up from 19% two years ago, according to newly released State Department data. Analysts link the increase to \"enhanced vetting\" tied to regional geopolitical tensions.",
+    timestamp: "6h",
+    likes: 12450,
+    retweets: 6789,
+    replies: 2341,
     category: "news",
-    topic: "conflict_update",
-    sentiment: -0.5
+    topic: "visa_statistics",
+    sentiment: -0.6
   },
   {
     id: "post_06",
-    author: "Ahmed Al-Rashid",
-    handle: "@ahmed_intl_student",
+    author: "Mehmet from Ankara",
+    handle: "@mehmetthink",
     avatar_color: "#FFAD1F",
-    text: "My roommate is from Jordan. Brilliant computer science student. Full scholarship. Just got told his visa renewal is \"under review\" with no timeline. He hasn\u2019t slept in 3 days. This is what the news won\u2019t show you \u2014 real people, real lives being destroyed.",
-    timestamp: "3h",
+    text: "Interview experience at the US Embassy Ankara last week: waited 4 hours, interviewed for 90 seconds, handed a slip saying \"administrative processing\" with no timeline. Cornell orientation starts in 6 weeks. I've already paid the deposit. Somebody please tell me this is normal.",
+    timestamp: "7h",
     likes: 6721,
     retweets: 2890,
-    replies: 743,
+    replies: 1534,
     category: "personal_experience",
-    topic: "visa_anxiety",
-    sentiment: -0.8
+    topic: "visa_interview",
+    sentiment: -0.7
   },
   {
     id: "post_07",
-    author: "Immigration Law Updates",
-    handle: "@imm_law_updates",
+    author: "EducationUSA Türkiye",
+    handle: "@eduusa_turkey",
     avatar_color: "#794BC4",
-    text: "Important clarification: Current F-1 visa holders inside the US are NOT immediately affected by the new order. However, those who travel abroad may face re-entry issues. We strongly advise against international travel until further guidance is issued.",
-    timestamp: "7h",
+    text: "IMPORTANT: If your F-1 visa is in administrative processing, here's what you can do: (1) Stay in touch with your university DSO, (2) Provide any additional documents requested, (3) Most cases resolve within 60 days. Don't panic — we're here to help. Free advising sessions Fri at 14:00.",
+    timestamp: "8h",
     likes: 9234,
-    retweets: 7102,
-    replies: 1892,
-    category: "legal_info",
-    topic: "policy_change",
-    sentiment: 0.1
+    retweets: 4521,
+    replies: 412,
+    category: "official",
+    topic: "advice",
+    sentiment: 0.5
   },
   {
     id: "post_08",
-    author: "Campus Reform Now",
-    handle: "@campusreformnow",
+    author: "TRT World",
+    handle: "@trtworld",
     avatar_color: "#E0245E",
-    text: "Universities that received federal funding while allowing anti-Israel protests on campus may face consequences under new guidelines. Several schools already reviewing their policies on campus demonstrations.",
-    timestamp: "8h",
-    likes: 4532,
-    retweets: 2341,
-    replies: 1876,
+    text: "BREAKING: US State Department announces new guidance affecting student visa interviews from 12 countries including Turkey. New screening procedures expected to add 60-90 days to processing times. Full statement expected later today.",
+    timestamp: "1h",
+    likes: 15230,
+    retweets: 8764,
+    replies: 3421,
     category: "news",
-    topic: "campus_politics",
-    sentiment: -0.3
+    topic: "policy_change",
+    sentiment: -0.5
   },
   {
     id: "post_09",
-    author: "Zeynep Kaya",
-    handle: "@zeynep_kaya_phd",
+    author: "Can Özdemir",
+    handle: "@can_ozdemir_eng",
     avatar_color: "#1DA1F2",
-    text: "Turkish student community at our university organized a support group for those dealing with visa uncertainty. 47 people showed up. 47. In a school of 200 international students. The anxiety is everywhere and nobody in admin seems to care.",
+    text: "Plot twist: after 3 months of \"administrative processing\" and nearly losing my CMU offer, my visa came through yesterday. To everyone waiting — it DOES happen. Hold on. I know it's brutal. I cried more times than I can count. But keep going.",
     timestamp: "9h",
-    likes: 3456,
-    retweets: 1567,
-    replies: 423,
+    likes: 22340,
+    retweets: 9876,
+    replies: 1234,
     category: "personal_experience",
-    topic: "community_response",
-    sentiment: -0.4
+    topic: "visa_success",
+    sentiment: 0.9
   },
   {
     id: "post_10",
-    author: "Senator Lisa Park",
-    handle: "@senatorpark",
+    author: "Prof. Orhan Yılmaz",
+    handle: "@orhanyilmaz_metu",
     avatar_color: "#17BF63",
-    text: "I introduced a bipartisan bill today to protect international students from visa disruptions caused by geopolitical conflicts they have no part in. These students came here to learn. They should not be collateral damage in foreign policy disputes.",
+    text: "METU's engineering graduate programs are currently accepting late applications from students whose US plans have been disrupted. We have funding. We have world-class research groups. You don't have to put your life on hold. Türkiye'nin sana ihtiyacı var.",
     timestamp: "10h",
-    likes: 18920,
-    retweets: 9234,
-    replies: 2341,
-    category: "political_response",
-    topic: "policy_change",
-    sentiment: 0.6
+    likes: 14567,
+    retweets: 5432,
+    replies: 687,
+    category: "institutional_response",
+    topic: "alternative_options",
+    sentiment: 0.7
   },
   {
     id: "post_11",
-    author: "David Chen",
-    handle: "@dchen_journalist",
+    author: "David Karlsson",
+    handle: "@karlsson_journalist",
     avatar_color: "#FFAD1F",
-    text: "Thread: I spent a week interviewing international students at 5 US universities. The pattern is consistent \u2014 Muslim and Middle Eastern students report being questioned more aggressively at visa renewals since the Gaza conflict escalated. Data in the thread. 1/12",
+    text: "Thread 🧵: I spent a week at the US Consulate General in Istanbul interviewing Turkish students affected by the new visa restrictions. The stories are devastating. Here are 10 things every Turkish student applying to US universities needs to know right now. 1/10",
     timestamp: "11h",
     likes: 7823,
     retweets: 4521,
     replies: 987,
     category: "journalism",
-    topic: "discrimination",
-    sentiment: -0.5
+    topic: "investigation",
+    sentiment: -0.4
   },
   {
     id: "post_12",
-    author: "Turkish American Association",
-    handle: "@turkamericanorg",
+    author: "Turkish Student Association",
+    handle: "@tsa_usa",
     avatar_color: "#794BC4",
-    text: "We are providing free legal consultations for Turkish students facing visa issues in the US. If you or someone you know needs help, DM us or visit our website. Lawyers are volunteering their time. You have rights \u2014 use them.",
+    text: "WE'RE HERE FOR YOU 🇹🇷 Free legal consultations, peer support groups, and emergency housing for Turkish students affected by visa delays. 47 American-Turkish lawyers are volunteering their time. DM us or email help@tsa-usa.org. You are not alone in this.",
     timestamp: "12h",
     likes: 11234,
     retweets: 8901,
-    replies: 654,
-    category: "resource",
-    topic: "support",
-    sentiment: 0.8
+    replies: 423,
+    category: "support",
+    topic: "community",
+    sentiment: 0.9
   },
   {
     id: "post_13",
-    author: "Mike Brennan",
-    handle: "@mike_b_opinions",
+    author: "Kaan Akbaş",
+    handle: "@kaanakbas_istanbul",
     avatar_color: "#E0245E",
-    text: "Unpopular opinion: if your home country\u2019s government supports Hamas, maybe the US should be more careful about who gets student visas. National security isn\u2019t xenophobia. It\u2019s common sense.",
+    text: "Honest question: why are we still fighting so hard to study in a country that clearly doesn't want us? Germany offers free tuition, Canada has a faster visa track, UK has one-year masters. Maybe it's time Turkish students stop viewing the US as the only option.",
     timestamp: "5h",
-    likes: 3210,
-    retweets: 1456,
-    replies: 4532,
+    likes: 8901,
+    retweets: 4532,
+    replies: 2109,
     category: "opinion",
-    topic: "security_debate",
-    sentiment: -0.7
+    topic: "alternatives",
+    sentiment: -0.3
   },
   {
     id: "post_14",
-    author: "Dr. Fatima Hassan",
-    handle: "@drfatimahassan",
+    author: "Dr. Selin Arslan",
+    handle: "@selinarslan_md",
     avatar_color: "#17BF63",
-    text: "I came to the US on a student visa 15 years ago. Now I run a cancer research lab that has published 40+ papers and trained 12 PhD students. Every time someone says \"be more careful about who gets visas,\" remember: you might be blocking the person who cures your disease.",
+    text: "15 years ago I was a Turkish medical student worried about my US residency visa. Today I run a cardiology research lab at Johns Hopkins with 4 Turkish PhD students. Every one of them faced what you're facing now. Every one got through. Your story is not finished.",
     timestamp: "4h",
     likes: 45230,
     retweets: 18920,
     replies: 3421,
-    category: "personal_experience",
-    topic: "immigration_value",
-    sentiment: 0.5
+    category: "support",
+    topic: "success_story",
+    sentiment: 0.9
   },
   {
     id: "post_15",
-    author: "University Watch",
-    handle: "@uni_watch_alert",
+    author: "Istanbul Study Abroad",
+    handle: "@istanbul_abroad",
     avatar_color: "#FFAD1F",
-    text: "UPDATE: At least 3 major universities have paused acceptance of new international students from certain Middle Eastern countries pending \"policy review.\" Names not yet public. Sources say announcements coming this week.",
+    text: "UPDATE: 8 US universities have confirmed they will hold admission offers for Turkish students whose visas are delayed beyond the fall semester. These include UIUC, UT Austin, UPenn, Georgia Tech, and 4 others. We'll publish the full list once we get permission.",
     timestamp: "2h",
     likes: 6789,
     retweets: 5432,
-    replies: 2109,
+    replies: 1098,
     category: "news",
-    topic: "policy_change",
-    sentiment: -0.6
+    topic: "institutional_response",
+    sentiment: 0.6
   },
   {
     id: "post_16",
-    author: "Murat Yilmaz",
-    handle: "@murat_y_istanbul",
+    author: "Berk Yıldız",
+    handle: "@berk_in_berlin",
     avatar_color: "#1DA1F2",
-    text: "My American classmates have been incredible. They organized a letter to the dean, started a GoFundMe for students who can\u2019t afford immigration lawyers, and showed up to every protest. This isn\u2019t an \"international student\" problem. They see it as an American values problem.",
+    text: "Switched my PhD application from Stanford to TU Berlin after my visa kept getting delayed. Germany: full funding, 3.5 years, same research quality, no visa drama, and they actually welcomed me. Sometimes the \"second choice\" turns out to be the right choice. No regrets.",
     timestamp: "6h",
     likes: 22340,
     retweets: 9876,
     replies: 1234,
     category: "personal_experience",
-    topic: "solidarity",
-    sentiment: 0.8
+    topic: "alternatives",
+    sentiment: 0.7
   },
   {
     id: "post_17",
-    author: "State Dept Watcher",
-    handle: "@statedeptwatcher",
+    author: "US Embassy Ankara",
+    handle: "@usembassyankara",
     avatar_color: "#794BC4",
-    text: "Visa refusal rates for Turkish nationals have increased 34% year-over-year according to newly released data. The State Department attributes this to \"enhanced vetting procedures\" but provides no specifics on what changed or why.",
+    text: "We understand students are experiencing delays. The US remains committed to welcoming qualified international students. For the most current visa wait times, please visit travel.state.gov. Interview slots are released daily at 09:00 local time.",
     timestamp: "14h",
     likes: 4567,
     retweets: 3210,
-    replies: 876,
-    category: "data",
-    topic: "policy_change",
-    sentiment: -0.3
+    replies: 5876,
+    category: "official",
+    topic: "official_statement",
+    sentiment: 0.0
   },
   {
     id: "post_18",
-    author: "Jessica Torres",
-    handle: "@jtorres_prof",
+    author: "Elif Şahin",
+    handle: "@elif_sahin_phd",
     avatar_color: "#E0245E",
-    text: "Just had a Turkish grad student break down crying in my office. She\u2019s 6 months from defending her dissertation and terrified she\u2019ll be forced to leave. I\u2019ve been a professor for 20 years and I have never felt this helpless. The system is failing these students.",
+    text: "Danışmanım \"6 ay bekleyelim\" diyor ama 6 ayım yok. Kira vereceğim, burs kaybettim, aileme yük oluyorum. Türk öğrenciler olarak sanki yanlış bir şey yapmış gibi hissettiriliyoruz ama tek suçumuz bir ülkede doğmak. Bu adil değil. #turkstudents #visaissues",
     timestamp: "8h",
     likes: 14567,
     retweets: 6789,
     replies: 2345,
     category: "personal_experience",
     topic: "emotional_impact",
-    sentiment: -0.8
+    sentiment: -0.85
   },
   {
     id: "post_19",
-    author: "Global Higher Ed",
-    handle: "@globalhighered",
+    author: "Global Higher Ed Watch",
+    handle: "@ghe_watch",
     avatar_color: "#17BF63",
-    text: "New report: International students contribute $40.1 billion to the US economy annually. For every student turned away by visa restrictions, competitor countries \u2014 Canada, UK, Australia \u2014 gain. The US is not the only option anymore, and students know it.",
+    text: "New report: Turkish students contributed $1.2 billion to the US higher education economy in 2024. For every qualified Turkish student turned away, Canada, UK, and Germany gain a future researcher, doctor, or engineer. The question is: what is the US losing?",
     timestamp: "16h",
     likes: 8901,
     retweets: 5432,
     replies: 1098,
     category: "analysis",
     topic: "economic_impact",
-    sentiment: 0.0
+    sentiment: 0.1
   },
   {
     id: "post_20",
-    author: "Ay\u015fe Erdo\u011fan",
+    author: "Ayşe Karaoğlu",
     handle: "@ayse_in_america",
     avatar_color: "#F45D22",
-    text: "I used to tell my cousins back in Turkey that America is the land of opportunity. Now they text me asking if I\u2019m safe. How did we get here? I just want to finish my degree and contribute to this country. That\u2019s all any of us want.",
+    text: "I made it to the US two years ago. I tell my cousins in Istanbul that America was the land of opportunity. Now they text me asking if I'm safe. How did we get here? I just wanted to finish my degree and contribute. That's all any of us ever wanted.",
     timestamp: "3h",
     likes: 9876,
     retweets: 4321,
     replies: 1567,
     category: "personal_experience",
     topic: "disillusionment",
-    sentiment: -0.6
+    sentiment: -0.5
   }
 ];
 
@@ -360,6 +417,12 @@ Qualtrics.SurveyEngine.addOnload(function() {
   // ---- Read embedded data ----
   var condition = Qualtrics.SurveyEngine.getEmbeddedData(FEED_CONFIG.embeddedFields.condition) || "default";
   var participantId = Qualtrics.SurveyEngine.getEmbeddedData(FEED_CONFIG.embeddedFields.participantId) || "unknown";
+
+  function debugLog() {
+    if (FEED_CONFIG.debug && typeof console !== "undefined") {
+      console.log.apply(console, ["[feed]"].concat(Array.prototype.slice.call(arguments)));
+    }
+  }
 
   // ---- Sorting ----
   function seededRandom(seed) {
@@ -390,10 +453,36 @@ Qualtrics.SurveyEngine.addOnload(function() {
     return shuffled;
   }
 
+  function customOrderSort(posts, conditionKey) {
+    var order = (FEED_CONFIG.customOrderings || {})[conditionKey];
+    if (!order || !order.length) {
+      debugLog("No customOrderings defined for condition", conditionKey, "falling back to original order.");
+      return posts.slice();
+    }
+    var byId = {};
+    posts.forEach(function(p) { byId[p.id] = p; });
+
+    var ordered = [];
+    var used = {};
+    order.forEach(function(id) {
+      if (byId[id]) {
+        ordered.push(byId[id]);
+        used[id] = true;
+      }
+    });
+    // Append any posts not listed in the custom order, preserving original order
+    posts.forEach(function(p) {
+      if (!used[p.id]) ordered.push(p);
+    });
+    return ordered;
+  }
+
   function sortPosts(posts, mode) {
     switch (mode) {
       case "random":
         return shuffleArray(posts, hashString(participantId));
+      case "custom_order":
+        return customOrderSort(posts, condition);
       case "sentiment_high":
         return posts.slice().sort(function(a, b) { return (b.sentiment || 0) - (a.sentiment || 0); });
       case "sentiment_low":
@@ -412,9 +501,11 @@ Qualtrics.SurveyEngine.addOnload(function() {
 
   var sortMode = FEED_CONFIG.conditionSortMap[condition] || FEED_CONFIG.conditionSortMap["default"] || "default";
   var sortedPosts = sortPosts(FEED_POSTS, sortMode);
+  debugLog("condition=" + condition, "sortMode=" + sortMode, "posts=" + sortedPosts.length);
 
   // ---- Format numbers ----
   function formatCount(n) {
+    if (!FEED_CONFIG.useRelativeCounts) return String(n);
     if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
     if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "K";
     return String(n);
@@ -424,7 +515,7 @@ Qualtrics.SurveyEngine.addOnload(function() {
   var style = document.createElement("style");
   style.textContent = [
     ".feed-wrapper {",
-    "  max-width: 600px;",
+    "  max-width: " + FEED_CONFIG.maxWidth + ";",
     "  margin: 0 auto;",
     "  border: 1px solid #2F3336;",
     "  border-radius: 16px;",
@@ -578,16 +669,21 @@ Qualtrics.SurveyEngine.addOnload(function() {
   feedWrapper.className = "feed-wrapper";
 
   // Header
-  var header = document.createElement("div");
-  header.className = "feed-header";
-  header.innerHTML = [
-    '<div class="feed-header-title">Home</div>',
-    '<div class="feed-header-tabs">',
-    '  <div class="feed-header-tab active">For you</div>',
-    '  <div class="feed-header-tab">Following</div>',
-    '</div>'
-  ].join("");
-  feedWrapper.appendChild(header);
+  if (FEED_CONFIG.showHeader) {
+    var header = document.createElement("div");
+    header.className = "feed-header";
+    var tabsHtml = "";
+    if (FEED_CONFIG.showTabs && FEED_CONFIG.tabs && FEED_CONFIG.tabs.length) {
+      tabsHtml = '<div class="feed-header-tabs">';
+      for (var t = 0; t < FEED_CONFIG.tabs.length; t++) {
+        var isActive = (t === FEED_CONFIG.activeTabIndex) ? " active" : "";
+        tabsHtml += '<div class="feed-header-tab' + isActive + '">' + FEED_CONFIG.tabs[t] + "</div>";
+      }
+      tabsHtml += "</div>";
+    }
+    header.innerHTML = '<div class="feed-header-title">' + FEED_CONFIG.headerTitle + "</div>" + tabsHtml;
+    feedWrapper.appendChild(header);
+  }
 
   var feedContainer = document.createElement("div");
   feedContainer.className = "feed-container";
@@ -602,6 +698,16 @@ Qualtrics.SurveyEngine.addOnload(function() {
     postEl.setAttribute("data-post-id", post.id);
     postEl.setAttribute("data-post-index", String(i));
 
+    var countsHtml = FEED_CONFIG.showEngagementCounts
+      ? '<span class="feed-action-count">' + formatCount(post.replies) + '</span>'
+      : '<span class="feed-action-count"></span>';
+    var retweetCountHtml = FEED_CONFIG.showEngagementCounts
+      ? '<span class="feed-action-count">' + formatCount(post.retweets) + '</span>'
+      : '<span class="feed-action-count"></span>';
+    var likeCountHtml = FEED_CONFIG.showEngagementCounts
+      ? '<span class="feed-action-count">' + formatCount(post.likes) + '</span>'
+      : '<span class="feed-action-count"></span>';
+
     postEl.innerHTML = [
       '<div class="feed-post-header">',
       '  <div class="feed-avatar" style="background:' + post.avatar_color + '">' + initials + '</div>',
@@ -614,9 +720,9 @@ Qualtrics.SurveyEngine.addOnload(function() {
       '    </div>',
       '    <div class="feed-post-text">' + post.text + '</div>',
       '    <div class="feed-actions">',
-      '      <button class="feed-action-btn reply" data-action="reply" data-post-id="' + post.id + '">' + ICONS.reply + '<span class="feed-action-count">' + formatCount(post.replies) + '</span></button>',
-      '      <button class="feed-action-btn retweet" data-action="retweet" data-post-id="' + post.id + '">' + ICONS.retweet + '<span class="feed-action-count">' + formatCount(post.retweets) + '</span></button>',
-      '      <button class="feed-action-btn like" data-action="like" data-post-id="' + post.id + '">' + ICONS.like + '<span class="feed-action-count">' + formatCount(post.likes) + '</span></button>',
+      '      <button class="feed-action-btn reply" data-action="reply" data-post-id="' + post.id + '">' + ICONS.reply + countsHtml + '</button>',
+      '      <button class="feed-action-btn retweet" data-action="retweet" data-post-id="' + post.id + '">' + ICONS.retweet + retweetCountHtml + '</button>',
+      '      <button class="feed-action-btn like" data-action="like" data-post-id="' + post.id + '">' + ICONS.like + likeCountHtml + '</button>',
       '      <button class="feed-action-btn bookmark" data-action="bookmark" data-post-id="' + post.id + '">' + ICONS.bookmark + '<span class="feed-action-count"></span></button>',
       '    </div>',
       '  </div>',
@@ -680,6 +786,7 @@ Qualtrics.SurveyEngine.addOnload(function() {
       active: !isActive,
       timestamp: Date.now() - feedStartTime
     });
+    debugLog("engagement", action, postId, !isActive);
   });
 
   // ---- Dwell tracking with IntersectionObserver ----
@@ -717,7 +824,7 @@ Qualtrics.SurveyEngine.addOnload(function() {
     });
   }, {
     root: feedContainer,
-    threshold: 0.5  // post must be 50% visible
+    threshold: FEED_CONFIG.intersectionThreshold
   });
 
   // Observe all posts
@@ -733,11 +840,6 @@ Qualtrics.SurveyEngine.addOnload(function() {
   });
 
   // ---- Save data to Qualtrics on page submit ----
-  qEngine.questionclick = function(event, element) {
-    // This fires on any click within the question — we use pageSubmit below instead
-  };
-
-  // Use Qualtrics page submit event to save data
   Qualtrics.SurveyEngine.addOnPageSubmit(function() {
     // Finalize dwell times for posts still in viewport
     var now = Date.now();
