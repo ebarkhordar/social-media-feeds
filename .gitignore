@@ -1,1 +1,10 @@
 .claude
+
+# twitter-scraper
+twitter-scraper/.env
+twitter-scraper/cookies/
+twitter-scraper/data/
+twitter-scraper/.venv/
+twitter-scraper/accounts.db
+twitter-scraper/__pycache__/
+twitter-scraper/**/__pycache__/
