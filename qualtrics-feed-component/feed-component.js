@@ -30,6 +30,8 @@ var FEED_CONFIG = {
   //   "default"         use FEED_POSTS order as-is
   //   "random"          seeded Fisher-Yates (same participant gets same order)
   //   "custom_order"    explicit post ID list from customOrderings below
+  //                     (supports pool refs like "listA_2" — see pools)
+  //   "pool_quota"      random-sample N posts per pool, then shuffle (see poolQuotas)
   //   "sentiment_high"  most positive sentiment first
   //   "sentiment_low"   most negative sentiment first
   //   "engagement"      highest total engagement (likes+retweets+replies) first
@@ -41,13 +43,39 @@ var FEED_CONFIG = {
     "default": "random"    // Fallback if condition is not set
   },
 
+  // ---------- Pools (named subsets of FEED_POSTS) ----------
+  // Define named groups of post IDs so you can reference them positionally in
+  // customOrderings (e.g. "listA_2" = 2nd post in listA) or sample randomly
+  // from them via poolQuotas.
+  //
+  // Current setup:
+  //   listA = "distressing"  (negative sentiment — visa hardship, rejections, family pressure)
+  //   listB = "supportive"   (positive sentiment — success stories, mentorship, alternatives)
+  // Posts not in any pool (post_17 official statement, post_19 economic analysis)
+  // are still available via direct ID and will be appended to the feed unless
+  // numTweets caps the total.
+  pools: {
+    listA: [
+      "post_01", "post_04", "post_05", "post_06", "post_08",
+      "post_11", "post_13", "post_18", "post_20", "post_21",
+      "post_22", "post_23", "post_24", "post_25"
+    ],
+    listB: [
+      "post_02", "post_03", "post_07", "post_09", "post_10",
+      "post_12", "post_14", "post_15", "post_16", "post_26",
+      "post_27", "post_28", "post_29", "post_30"
+    ]
+  },
+
   // Custom per-condition post orderings.
-  // List the post IDs in the exact order they should appear in the feed.
-  // Any post IDs in FEED_POSTS that are NOT in this list will be appended
-  // at the end in their original order.
+  // Each entry is either:
+  //   - a direct post ID:        "post_04"
+  //   - a pool reference:        "listA_2"  (= 2nd post in pool "listA", 1-indexed)
+  // Any post IDs in FEED_POSTS that are NOT listed (and not pulled in via a
+  // pool ref) will be appended at the end in their original order. Set
+  // `numTweets` below to cap the total length of the feed.
   //
   // TODO: Replace these placeholder orderings with the ones from your advisor.
-  // Just list post IDs (see FEED_POSTS below for available IDs).
   customOrderings: {
     "A": [
       // PLACEHOLDER — replace with advisor's ordering for Condition A
@@ -63,6 +91,15 @@ var FEED_CONFIG = {
       "post_15", "post_08", "post_13", "post_11", "post_20",
       "post_09", "post_01", "post_06", "post_18", "post_04"
     ]
+  },
+
+  // Per-condition random-sampling quotas (used when a condition's sort mode
+  // is "pool_quota"). Draws N posts at random from each named pool, then
+  // shuffles the combined set. Sampling is seeded by participantId so each
+  // participant always sees the same draw.
+  poolQuotas: {
+    // Example:
+    // "A": { listA: 2, listB: 3 }   // 2 random from listA + 3 random from listB
   },
 
   // ---------- Qualtrics integration ----------
@@ -86,13 +123,28 @@ var FEED_CONFIG = {
   tabs: ["For you", "Following"],
   activeTabIndex: 0,
 
-  // Post display
-  showEngagementCounts: true,       // show like/retweet/reply counts
+  // ---------- Post element visibility ----------
+  // Each flag toggles a single piece of the post UI. Hidden buttons still
+  // can't be clicked (so engagement is not logged for them).
+  showAvatar: true,
+  showHandle: true,                 // "@username"
+  showTimestamp: true,              // "2h"
+  showReplyButton: true,
+  showRetweetButton: true,
+  showLikeButton: true,
+  showBookmarkButton: true,         // set false to remove the bookmark icon
+  showReplyCount: true,             // numeric count next to reply icon
+  showRetweetCount: true,
+  showLikeCount: true,
   useRelativeCounts: true,          // "1.2K" instead of "1243"
   showEndMessage: true,
   endMessageText: "You've reached the end of your feed.",
 
   // ---------- Feed behavior ----------
+  // Cap total posts shown. 0 = no cap (show every post the sort/sample produces).
+  // Applies AFTER sorting/sampling. With customOrderings, this lets you list
+  // a long preferred order and only render the first N.
+  numTweets: 0,
   requireFullScroll: false,         // gate Next button until reaching the bottom
   minTimeSeconds: 0,                // minimum time before Next is enabled (0 = no gate)
 
@@ -396,6 +448,146 @@ var FEED_POSTS = [
     category: "personal_experience",
     topic: "disillusionment",
     sentiment: -0.5
+  },
+  {
+    id: "post_21",
+    author: "Burak Yıldırım",
+    handle: "@burak_phd_dreams",
+    avatar_color: "#E0245E",
+    text: "Annem ağladı bu sabah. \"Babanla emekli paramızı senin için biriktirdik\" dedi. Şimdi 3 ayım kaldı: ya gidiyorum ya hayalimi kaybediyorum. Bu yükü kimse hak etmiyor. Ne aile, ne öğrenci.",
+    timestamp: "5h",
+    likes: 7820,
+    retweets: 3210,
+    replies: 1890,
+    category: "personal_experience",
+    topic: "family_pressure",
+    sentiment: -0.85
+  },
+  {
+    id: "post_22",
+    author: "Pelin Çelik",
+    handle: "@pelin_yale_hopeful",
+    avatar_color: "#1DA1F2",
+    text: "Second visa rejection in 4 months. The officer didn't even open my Yale acceptance letter. I'm 25, I have a Master's, I have funding, and somehow I'm \"a flight risk\". I don't know what answer they want me to have.",
+    timestamp: "6h",
+    likes: 11340,
+    retweets: 5670,
+    replies: 2340,
+    category: "personal_experience",
+    topic: "visa_rejection",
+    sentiment: -0.85
+  },
+  {
+    id: "post_23",
+    author: "Onur Kaplan",
+    handle: "@onur_grad_eng",
+    avatar_color: "#FFAD1F",
+    text: "Lost my $35K research assistantship today. The department couldn't hold the slot any longer — visa was still in admin processing. Six years of work to get to this point. I don't know how to tell my partner.",
+    timestamp: "8h",
+    likes: 9450,
+    retweets: 4120,
+    replies: 1567,
+    category: "personal_experience",
+    topic: "lost_funding",
+    sentiment: -0.9
+  },
+  {
+    id: "post_24",
+    author: "Cem Doğan",
+    handle: "@cemdoganwrites",
+    avatar_color: "#E0245E",
+    text: "Friend in Berlin: \"My visa came in 8 days.\" Friend in Toronto: \"3 weeks, no interview required.\" Me, in Istanbul: \"7 months, still administrative processing.\" Why do we still treat the US like the gold standard? It's a choice we keep making.",
+    timestamp: "10h",
+    likes: 13670,
+    retweets: 7230,
+    replies: 1890,
+    category: "opinion",
+    topic: "alternatives",
+    sentiment: -0.6
+  },
+  {
+    id: "post_25",
+    author: "Selin Ay",
+    handle: "@selin_columbia25",
+    avatar_color: "#F45D22",
+    text: "Columbia Law orientation in 11 days. Visa interview rescheduled — for September. I've already paid $14K in deposits and travel. They told me to \"defer one year\". Defer to what? Another year of the same uncertainty?",
+    timestamp: "12h",
+    likes: 6780,
+    retweets: 2890,
+    replies: 1230,
+    category: "personal_experience",
+    topic: "deferral",
+    sentiment: -0.8
+  },
+  {
+    id: "post_26",
+    author: "MIT CSAIL",
+    handle: "@mit_csail",
+    avatar_color: "#794BC4",
+    text: "To our incoming Turkish PhD students experiencing visa delays: your offer stands. Your funding stands. Your research seat stands. We will wait as long as it takes. Email csail-admissions for a dedicated point of contact.",
+    timestamp: "3h",
+    likes: 28450,
+    retweets: 12890,
+    replies: 567,
+    category: "official",
+    topic: "institutional_response",
+    sentiment: 0.9
+  },
+  {
+    id: "post_27",
+    author: "Turkish PhDs USA",
+    handle: "@turkphds_usa",
+    avatar_color: "#17BF63",
+    text: "We've connected 240 Turkish PhD students currently in the US with 80+ incoming students stuck in visa limbo. Pen-pal mentorship, housing tips, paperwork help. If you're affected, this network is yours. Free signup at turkphds.org/connect.",
+    timestamp: "4h",
+    likes: 8970,
+    retweets: 5430,
+    replies: 320,
+    category: "support",
+    topic: "community",
+    sentiment: 0.85
+  },
+  {
+    id: "post_28",
+    author: "Max Planck Society",
+    handle: "@maxplanckpress",
+    avatar_color: "#1DA1F2",
+    text: "Opening 30 emergency PhD positions across our institutes for international scholars whose 2025-2026 placements were disrupted. Full funding, English-language programs, four-year contracts. Reviews start immediately. Türkiye, we hear you.",
+    timestamp: "7h",
+    likes: 19340,
+    retweets: 11230,
+    replies: 890,
+    category: "institutional_response",
+    topic: "alternative_options",
+    sentiment: 0.8
+  },
+  {
+    id: "post_29",
+    author: "Tuana Aksoy",
+    handle: "@tuana_in_athens",
+    avatar_color: "#FFAD1F",
+    text: "Couldn't get the US visa, ended up in Athens. My grandmother said: \"Çocuğum, dünyanın her yerinde bir Türk vardır ve hepsi sana yardım eder.\" Six months in, she was right. The diaspora catches you. Hep birlikteyiz.",
+    timestamp: "9h",
+    likes: 16780,
+    retweets: 7890,
+    replies: 567,
+    category: "personal_experience",
+    topic: "alternatives",
+    sentiment: 0.85
+  },
+  {
+    id: "post_30",
+    author: "Dr. Murat Korkmaz",
+    handle: "@drmurat_neuro",
+    avatar_color: "#17BF63",
+    text: "Update: After 8 months of administrative processing, I've finally landed at Harvard. To anyone still waiting — the system is broken, but it's not broken for everyone forever. Your turn will come. Reach out if you need someone to talk to. We've all been there.",
+    timestamp: "11h",
+    likes: 24560,
+    retweets: 9870,
+    replies: 1340,
+    category: "personal_experience",
+    topic: "visa_success",
+    sentiment: 0.9
   }
 ];
 
@@ -416,7 +608,16 @@ Qualtrics.SurveyEngine.addOnload(function() {
 
   // ---- Read embedded data ----
   var condition = Qualtrics.SurveyEngine.getEmbeddedData(FEED_CONFIG.embeddedFields.condition) || "default";
-  var participantId = Qualtrics.SurveyEngine.getEmbeddedData(FEED_CONFIG.embeddedFields.participantId) || "unknown";
+  var participantId = Qualtrics.SurveyEngine.getEmbeddedData(FEED_CONFIG.embeddedFields.participantId);
+
+  // Auto-generate a participant ID if one wasn't supplied (e.g. for a single
+  // public link distributed via Qualtrics where condition is set by Survey
+  // Flow Randomizer, not URL params). The seeded shuffle and dwell tracking
+  // both key off this ID, so a unique value per response matters.
+  if (!participantId) {
+    participantId = "p_" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+    Qualtrics.SurveyEngine.setEmbeddedData(FEED_CONFIG.embeddedFields.participantId, participantId);
+  }
 
   function debugLog() {
     if (FEED_CONFIG.debug && typeof console !== "undefined") {
@@ -453,6 +654,26 @@ Qualtrics.SurveyEngine.addOnload(function() {
     return shuffled;
   }
 
+  // Resolve a customOrderings entry to a post ID.
+  // Pool refs look like "<poolName>_<1-indexedPosition>" (e.g. "listA_2").
+  // The prefix only counts as a pool ref if it matches a configured pool;
+  // otherwise the entry is treated as a direct post ID. This means real IDs
+  // like "post_01" stay direct as long as you don't define a pool named "post".
+  function resolvePostRef(ref) {
+    var pools = FEED_CONFIG.pools || {};
+    var match = /^(.+)_(\d+)$/.exec(ref);
+    if (match && Object.prototype.hasOwnProperty.call(pools, match[1])) {
+      var pool = pools[match[1]];
+      var pos = parseInt(match[2], 10);
+      if (pool && pos >= 1 && pos <= pool.length) {
+        return pool[pos - 1];
+      }
+      debugLog("Pool ref out of range:", ref);
+      return null;
+    }
+    return ref;
+  }
+
   function customOrderSort(posts, conditionKey) {
     var order = (FEED_CONFIG.customOrderings || {})[conditionKey];
     if (!order || !order.length) {
@@ -464,8 +685,9 @@ Qualtrics.SurveyEngine.addOnload(function() {
 
     var ordered = [];
     var used = {};
-    order.forEach(function(id) {
-      if (byId[id]) {
+    order.forEach(function(ref) {
+      var id = resolvePostRef(ref);
+      if (id && byId[id] && !used[id]) {
         ordered.push(byId[id]);
         used[id] = true;
       }
@@ -477,12 +699,51 @@ Qualtrics.SurveyEngine.addOnload(function() {
     return ordered;
   }
 
+  // Random-sample N posts from each pool listed in poolQuotas[condition],
+  // then shuffle the combined set. Sampling is seeded by participantId so
+  // the same participant always sees the same draw.
+  function poolQuotaSort(posts, conditionKey) {
+    var quotas = (FEED_CONFIG.poolQuotas || {})[conditionKey];
+    var pools = FEED_CONFIG.pools || {};
+    if (!quotas) {
+      debugLog("No poolQuotas defined for condition", conditionKey, "falling back to original order.");
+      return posts.slice();
+    }
+    var byId = {};
+    posts.forEach(function(p) { byId[p.id] = p; });
+
+    var seed = hashString(participantId + "|" + conditionKey);
+    var picked = [];
+    var pickedIds = {};
+
+    Object.keys(quotas).forEach(function(poolName) {
+      var pool = pools[poolName];
+      if (!pool) {
+        debugLog("poolQuotas references unknown pool:", poolName);
+        return;
+      }
+      var n = Math.min(quotas[poolName] || 0, pool.length);
+      var shuffled = shuffleArray(pool, seed + hashString(poolName));
+      for (var i = 0; i < n; i++) {
+        var id = shuffled[i];
+        if (byId[id] && !pickedIds[id]) {
+          picked.push(byId[id]);
+          pickedIds[id] = true;
+        }
+      }
+    });
+
+    return shuffleArray(picked, seed);
+  }
+
   function sortPosts(posts, mode) {
     switch (mode) {
       case "random":
         return shuffleArray(posts, hashString(participantId));
       case "custom_order":
         return customOrderSort(posts, condition);
+      case "pool_quota":
+        return poolQuotaSort(posts, condition);
       case "sentiment_high":
         return posts.slice().sort(function(a, b) { return (b.sentiment || 0) - (a.sentiment || 0); });
       case "sentiment_low":
@@ -501,6 +762,12 @@ Qualtrics.SurveyEngine.addOnload(function() {
 
   var sortMode = FEED_CONFIG.conditionSortMap[condition] || FEED_CONFIG.conditionSortMap["default"] || "default";
   var sortedPosts = sortPosts(FEED_POSTS, sortMode);
+
+  // Cap to numTweets if configured (0 means no cap)
+  var numTweets = FEED_CONFIG.numTweets || 0;
+  if (numTweets > 0 && sortedPosts.length > numTweets) {
+    sortedPosts = sortedPosts.slice(0, numTweets);
+  }
   debugLog("condition=" + condition, "sortMode=" + sortMode, "posts=" + sortedPosts.length);
 
   // ---- Format numbers ----
@@ -689,6 +956,11 @@ Qualtrics.SurveyEngine.addOnload(function() {
   feedContainer.className = "feed-container";
   feedContainer.id = "feed-container";
 
+  function actionBtn(postId, action, icon, count) {
+    var countSpan = '<span class="feed-action-count">' + (count == null ? "" : count) + '</span>';
+    return '<button class="feed-action-btn ' + action + '" data-action="' + action + '" data-post-id="' + postId + '">' + icon + countSpan + '</button>';
+  }
+
   for (var i = 0; i < sortedPosts.length; i++) {
     var post = sortedPosts[i];
     var initials = post.author.split(" ").map(function(w) { return w[0]; }).join("").substring(0, 2);
@@ -698,33 +970,47 @@ Qualtrics.SurveyEngine.addOnload(function() {
     postEl.setAttribute("data-post-id", post.id);
     postEl.setAttribute("data-post-index", String(i));
 
-    var countsHtml = FEED_CONFIG.showEngagementCounts
-      ? '<span class="feed-action-count">' + formatCount(post.replies) + '</span>'
-      : '<span class="feed-action-count"></span>';
-    var retweetCountHtml = FEED_CONFIG.showEngagementCounts
-      ? '<span class="feed-action-count">' + formatCount(post.retweets) + '</span>'
-      : '<span class="feed-action-count"></span>';
-    var likeCountHtml = FEED_CONFIG.showEngagementCounts
-      ? '<span class="feed-action-count">' + formatCount(post.likes) + '</span>'
-      : '<span class="feed-action-count"></span>';
+    // Author line — assemble conditionally
+    var authorLine = '<span class="feed-author-name">' + post.author + '</span>';
+    if (FEED_CONFIG.showHandle) {
+      authorLine += '<span class="feed-author-handle">' + post.handle + '</span>';
+    }
+    if (FEED_CONFIG.showTimestamp) {
+      if (FEED_CONFIG.showHandle) {
+        authorLine += '<span class="feed-dot">&middot;</span>';
+      }
+      authorLine += '<span class="feed-timestamp">' + post.timestamp + '</span>';
+    }
+
+    // Action buttons — only render the ones enabled
+    var actions = "";
+    if (FEED_CONFIG.showReplyButton) {
+      actions += actionBtn(post.id, "reply", ICONS.reply,
+        FEED_CONFIG.showReplyCount ? formatCount(post.replies) : "");
+    }
+    if (FEED_CONFIG.showRetweetButton) {
+      actions += actionBtn(post.id, "retweet", ICONS.retweet,
+        FEED_CONFIG.showRetweetCount ? formatCount(post.retweets) : "");
+    }
+    if (FEED_CONFIG.showLikeButton) {
+      actions += actionBtn(post.id, "like", ICONS.like,
+        FEED_CONFIG.showLikeCount ? formatCount(post.likes) : "");
+    }
+    if (FEED_CONFIG.showBookmarkButton) {
+      actions += actionBtn(post.id, "bookmark", ICONS.bookmark, "");
+    }
+
+    var avatarHtml = FEED_CONFIG.showAvatar
+      ? '<div class="feed-avatar" style="background:' + post.avatar_color + '">' + initials + '</div>'
+      : '';
 
     postEl.innerHTML = [
       '<div class="feed-post-header">',
-      '  <div class="feed-avatar" style="background:' + post.avatar_color + '">' + initials + '</div>',
+      avatarHtml,
       '  <div class="feed-post-body">',
-      '    <div class="feed-author-line">',
-      '      <span class="feed-author-name">' + post.author + '</span>',
-      '      <span class="feed-author-handle">' + post.handle + '</span>',
-      '      <span class="feed-dot">&middot;</span>',
-      '      <span class="feed-timestamp">' + post.timestamp + '</span>',
-      '    </div>',
+      '    <div class="feed-author-line">' + authorLine + '</div>',
       '    <div class="feed-post-text">' + post.text + '</div>',
-      '    <div class="feed-actions">',
-      '      <button class="feed-action-btn reply" data-action="reply" data-post-id="' + post.id + '">' + ICONS.reply + countsHtml + '</button>',
-      '      <button class="feed-action-btn retweet" data-action="retweet" data-post-id="' + post.id + '">' + ICONS.retweet + retweetCountHtml + '</button>',
-      '      <button class="feed-action-btn like" data-action="like" data-post-id="' + post.id + '">' + ICONS.like + likeCountHtml + '</button>',
-      '      <button class="feed-action-btn bookmark" data-action="bookmark" data-post-id="' + post.id + '">' + ICONS.bookmark + '<span class="feed-action-count"></span></button>',
-      '    </div>',
+      '    <div class="feed-actions">' + actions + '</div>',
       '  </div>',
       '</div>'
     ].join("\n");

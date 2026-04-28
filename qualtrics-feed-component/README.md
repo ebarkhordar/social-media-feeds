@@ -4,8 +4,8 @@ A drop-in JavaScript snippet that renders a scrollable, Twitter-like social medi
 
 ## What It Does
 
-- Renders 20 posts in a dark-mode Twitter-style scrollable feed
-- Sorts posts by condition (negative-first, positive-first, random, engagement, or custom order)
+- Renders 30 posts in a dark-mode Twitter-style scrollable feed, organized into two named pools (`listA` = distressing, `listB` = supportive) for mix-and-match study designs
+- Sorts posts by condition (negative-first, positive-first, random, engagement, custom order, or pool-quota sampling)
 - Tracks how long each participant looks at each post (dwell time via IntersectionObserver)
 - Records like/retweet/bookmark clicks with timestamps
 - Saves all data to Qualtrics embedded data fields so it appears in your CSV export
@@ -51,20 +51,43 @@ Block 3: Post-Survey Questions
 
 ### Step 2: Set Up Condition Assignment
 
-**Option A — Random assignment in Qualtrics:**
-1. In Survey Flow, click **Add Below** your Embedded Data → **Randomizer**
-2. Set to "Evenly Present Elements"
-3. Add 3 branches under it, each with an Embedded Data element setting `condition`:
-   - Branch 1: `condition = A`
-   - Branch 2: `condition = B`
-   - Branch 3: `condition = C`
+**Recommended setup — one public link, Qualtrics randomizes each participant.**
 
-**Option B — Pass condition via URL (from Prolific/MTurk):**
-Your survey URL will look like:
+You distribute a single survey URL. Qualtrics's Survey Flow Randomizer assigns each participant to condition A, B, or C the moment they open the link — no URL parameters, no per-condition links to manage.
+
+1. Open **Survey Flow** (left sidebar)
+2. Below the Embedded Data element you created in Step 1, click **Add a New Element Here** → **Randomizer**
+3. Click on the Randomizer to expand it. Set:
+   - **"Randomly present X of the following Y elements"** → set X = 1
+   - Tick **"Evenly Present Elements"** so the distribution stays balanced across participants
+4. Inside the Randomizer, click **Add a New Element Here** → **Embedded Data** three times (once per condition):
+   - First element: set `condition = A`
+   - Second element: set `condition = B`
+   - Third element: set `condition = C`
+5. Click **Save Flow**
+
+Survey Flow should look like this:
+```
+Embedded Data: condition, participant_id, dwell_data, engagement_data
+Randomizer (Evenly present 1 of 3)
+  ├─ Embedded Data: condition = A
+  ├─ Embedded Data: condition = B
+  └─ Embedded Data: condition = C
+
+Block 1: Pre-Survey Questions
+Block 2: Feed Task
+Block 3: Post-Survey Questions
+```
+
+`participant_id` does NOT need to be passed in the URL — the JavaScript auto-generates a unique random ID per response and writes it back to the embedded data field, so dwell tracking and the seeded post-shuffle still work correctly. (If you also pass `?participant_id=...` in the URL, that value wins.)
+
+**Alternative — pass condition via URL (Prolific/MTurk panels):**
+
+If a panel platform handles randomization for you, you can override the Survey Flow Randomizer by passing parameters directly:
 ```
 https://youruniversity.qualtrics.com/jfe/form/SV_xxxxx?condition=A&participant_id=P123
 ```
-Qualtrics automatically reads URL parameters into matching embedded data fields.
+Qualtrics auto-binds matching URL parameters to embedded data fields, so a URL value will override whatever the Randomizer would have set.
 
 ### Step 3: Create the Feed Question
 
@@ -91,7 +114,7 @@ Qualtrics automatically reads URL parameters into matching embedded data fields.
 
 ### Step 5: Customize Your Posts (Optional)
 
-The script contains 20 sample posts about international student visa issues. To use your own posts:
+The script contains 30 sample posts about international student visa issues, pre-organized into two pools (`listA` = 14 distressing posts, `listB` = 14 supportive posts; 2 neutral posts not assigned to any pool). To use your own posts:
 
 1. In the JavaScript editor, find the `FEED_POSTS` array near the top
 2. Replace it with your own posts, following this format:
@@ -128,7 +151,8 @@ conditionSortMap: {
 Available sort modes:
 - `"default"` — array order as-is
 - `"random"` — seeded shuffle (same participant always sees same order)
-- `"custom_order"` — explicit post ID list per condition (see below)
+- `"custom_order"` — explicit post ID list per condition (see below; supports pool refs)
+- `"pool_quota"` — random-sample N posts from each named pool, then shuffle (see below)
 - `"sentiment_high"` — most positive sentiment first
 - `"sentiment_low"` — most negative sentiment first
 - `"engagement"` — most liked/retweeted first
@@ -156,10 +180,78 @@ customOrderings: {
 Rules:
 - List post IDs in the exact order you want them to appear (top of feed first).
 - Any post IDs not listed in `customOrderings[condition]` will be appended at
-  the end of the feed in their original order — nothing gets silently dropped.
+  the end of the feed in their original order — nothing gets silently dropped
+  (use `numTweets` below to cap the total length).
 - IDs that don't exist in `FEED_POSTS` are ignored.
 - If a condition has no custom ordering defined, it falls back to the original
   `FEED_POSTS` order.
+
+#### Pools (named subsets you can mix)
+
+Define `pools` if you want to organize posts into named lists and reference
+them positionally (e.g. "the 2nd post in list A"):
+
+```javascript
+pools: {
+  listA: ["post_01", "post_02", "post_03", "post_04"],
+  listB: ["post_05", "post_06", "post_07", "post_08"]
+}
+```
+
+Then in `customOrderings`, use entries like `"listA_2"` (= 2nd post in pool
+`listA`) alongside direct post IDs:
+
+```javascript
+customOrderings: {
+  "A": ["listA_1", "listB_3", "listA_2", "listB_1"]
+}
+```
+
+The prefix only counts as a pool ref if it matches a configured pool name —
+existing IDs like `post_01` still resolve directly.
+
+#### Pool quotas (random sampling)
+
+To draw N random posts from each pool instead of listing them explicitly,
+set the condition's sort mode to `"pool_quota"` and add a `poolQuotas` entry:
+
+```javascript
+conditionSortMap: { "A": "pool_quota" },
+poolQuotas: {
+  "A": { listA: 2, listB: 3 }   // 2 random from listA + 3 random from listB
+}
+```
+
+The combined set is then shuffled. Sampling is seeded by `participant_id`,
+so the same participant always sees the same draw on reload.
+
+#### Limit total posts
+
+```javascript
+numTweets: 10   // 0 = no cap (default). Applies AFTER sorting/sampling.
+```
+
+Useful when `customOrderings` lists a long preferred order but you only want
+to render the first N to participants.
+
+#### Show / hide individual UI elements
+
+Each piece of the post UI can be toggled independently:
+
+| Flag | Default | Effect |
+|------|---------|--------|
+| `showAvatar` | `true` | Colored avatar circle |
+| `showHandle` | `true` | `@username` next to author name |
+| `showTimestamp` | `true` | `2h` / `4h` relative time |
+| `showReplyButton` | `true` | Reply icon (and click logging) |
+| `showRetweetButton` | `true` | Retweet icon |
+| `showLikeButton` | `true` | Like icon |
+| `showBookmarkButton` | `true` | Bookmark icon — set `false` to remove |
+| `showReplyCount` | `true` | Number next to reply icon |
+| `showRetweetCount` | `true` | Number next to retweet icon |
+| `showLikeCount` | `true` | Number next to like icon |
+
+Hidden buttons can't be clicked, so engagement isn't logged for them.
 
 ### Step 7: Preview and Test
 
